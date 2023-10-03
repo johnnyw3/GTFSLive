@@ -24,22 +24,28 @@ public class GTFSParser{
             System.exit(1);
         }
 
-        File tripFile = new File(argv[0] + "/trips.txt");
-        Scanner tripFileContents = new Scanner(tripFile);
-        Hashtable<String, Trip> trips = readTrips(tripFileContents);
-        tripFileContents.close();
-
-        //System.out.println(trips);
-
         File calendarFile = new File(argv[0] + "/calendar.txt");
-        Scanner calendarFileContents = new Scanner(calendarFile);
-        Hashtable<String, Service> services = readCalendar(calendarFileContents);
+        Hashtable<String, Service> services = new Hashtable<String, Service>();
+        /* calendar.txt doesn't seem to exist in some feeds, in this case 
+         * calendar_dates.txt will be used for all dates */
+        if (calendarFile.exists()){
+            Scanner calendarFileContents = new Scanner(calendarFile);
+            services = readCalendar(calendarFileContents);
+            calendarFileContents.close();
+        }
 
         File calendarDatesFile = new File(argv[0] + "/calendar_dates.txt");
         Scanner calendarDatesContents = new Scanner(calendarDatesFile);
         readCalendarDates(services, calendarDatesContents);
+        calendarDatesContents.close();
 
-        System.out.println(services);
+        File tripFile = new File(argv[0] + "/trips.txt");
+        Scanner tripFileContents = new Scanner(tripFile);
+        Hashtable<String, Trip> trips = readTrips(tripFileContents, services);
+        tripFileContents.close();
+
+        System.out.println(trips);
+
     }
 
     public static void readCalendarDates(Hashtable<String, Service> services, 
@@ -84,7 +90,8 @@ public class GTFSParser{
 
     }
 
-    public static Hashtable<String, Trip> readTrips(Scanner tripFile){
+    public static Hashtable<String, Trip> readTrips(Scanner tripFile,
+                                           Hashtable<String, Service> services){
         Hashtable<String, Trip> trips = new Hashtable<String, Trip>(1000);
         
         // skip header line
@@ -94,8 +101,10 @@ public class GTFSParser{
             String curLine = tripFile.nextLine();
             String[] lineContents = curLine.split(",");
 
+            Service curService = services.get(lineContents[TRIP_SERVICEID_COL]); 
+
             Trip curTrip = new Trip(lineContents[TRIP_ID_COL], 
-                                    lineContents[TRIP_SERVICEID_COL],
+                                    curService,
                                     lineContents[TRIP_ROUTEID_COL], 
                                     lineContents[TRIP_HEADSIGN_COL],
                                     lineContents[TRIP_BLOCKID_COL]);
